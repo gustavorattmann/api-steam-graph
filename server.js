@@ -1,64 +1,60 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 
 const app = express();
 
 app.use(cors());
+
+const url = 'https://store.steampowered.com/charts/mostplayed/';
 
 app.get('/mais-jogados/:pagina?', async (req, res, next) => {
     const pagina = req.params.pagina;
 
     if (pagina === undefined || (pagina > 0 && pagina < 11)) {
         let listaJogos = [];
-        var objetoJogos = {};
-    
-        const request = {
-            method: 'get',
-            url: 'https://steamspy.com/api.php?request=top100forever'
-        }
-    
-        await axios(request)
-        .then(async (result) => {
-            // console.log(result)
-    
-            if (result.data !== '') {
-                let jogos = result.data;
-        
-                let contador = 0;
-        
-                for (var jogo in jogos) {
-                    var precoCorrigido = parseInt(jogos[jogo].price) !== 0 ? (parseInt(jogos[jogo].price) / 100).toFixed(2) : 0;
-    
-                    var id = jogos[jogo].appid;
-                    var nome = jogos[jogo].name;
-                    var preco = precoCorrigido;
-                    var avaliacoesPositivas = jogos[jogo].positive;
-                    var avaliacoesNegativas = jogos[jogo].negative;
-                    var desenvolvedor = jogos[jogo].developer;
-                    var publicador = jogos[jogo].developer;
-                    var quantidadeDonos = jogos[jogo].owners;
-                    var quantidadeJogadores = jogos[jogo].ccu;
-                    var capsule = jogos[jogo].capsule = `https://cdn.cloudflare.steamstatic.com/steam/apps/${jogo}/capsule_231x87.jpg`;
-        
-                    listaJogos[contador] = {
+
+        (async function obterJogos() {
+            try {
+                const browser = await puppeteer.launch();
+                const [page] = await browser.pages();
+
+                await page.goto(url, { waitUntil: 'networkidle0' });
+                const data = await page.evaluate(() => document.querySelector('.weeklytopsellers_ChartTable_3arZn').outerHTML);
+
+                const $ = cheerio.load(data);
+                
+                $('tbody tr.weeklytopsellers_TableRow_2-RN6').each((i, elem) => {
+                    var id = $(elem).find('.weeklytopsellers_RankCell_34h48').text();
+                    var nome = $(elem).find('.weeklytopsellers_GameName_1n_4-').text();
+                    var imagem = $(elem).find('.weeklytopsellers_CapsuleArt_2dODJ').attr('src');
+                    var link = $(elem).find('.weeklytopsellers_TopChartItem_2C5PJ').attr('href');
+                    var precoOriginal = $(elem).find('.salepreviewwidgets_StoreOriginalPrice_1EKGZ').text();
+                    var precoDesconto = $(elem).find('.salepreviewwidgets_StoreSalePriceBox_Wh0L8').text();
+                    var porcentagem = $(elem).find('.salepreviewwidgets_StoreSaleDiscountBox_2fpFv').text();
+                    var jogando = $(elem).find('.weeklytopsellers_ConcurrentCell_3L0CD').text();
+                    var pico = $(elem).find('.weeklytopsellers_PeakInGameCell_yJB7D').text();
+
+                    if (precoDesconto === 'Free To Play') {
+                        precoOriginal = 'Gratuito para jogar';
+                        precoDesconto = '';
+                    }
+
+                    listaJogos.push({
                         id: id,
                         nome: nome,
-                        preco: preco,
-                        quantidade_revisoes_positivas: avaliacoesPositivas,
-                        quantidade_revisoes_negativas: avaliacoesNegativas,
-                        quantidade_donos: quantidadeDonos,
-                        quantidade_jogadores: quantidadeJogadores,
-                        desenvolvedor: desenvolvedor,
-                        publicador: publicador,
-                        capsule: capsule
-                    }
-        
-                    contador++;
-                }
-        
-                listaJogos.sort((a, b) => b.quantidade_jogadores - a.quantidade_jogadores);
-    
+                        imagem: imagem,
+                        link: link,
+                        preco_original: precoOriginal,
+                        preco_desconto: precoDesconto,
+                        porcentagem: porcentagem,
+                        jogando: jogando,
+                        pico: pico
+                    });
+                });
+
                 switch (pagina) {
                     case '1':
                         listaJogos = listaJogos.slice(0, 10).map((item) => {
@@ -111,19 +107,16 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
                         });
                     break;
                 }
-    
+        
                 objetoJogos = Object.assign({}, listaJogos);
         
                 res.send(objetoJogos);
-            } else {
-                res.status(404).send('Não foi possível encontrar a lista de jogos!');
+
+                await browser.close();
+            } catch (err) {
+                console.error(err);
             }
-        })
-        .catch((err) => {
-            console.log(err)
-    
-            res.status(500).send('Ocorreu um erro ao realizar a busca dos jogos. Por favor, tente novamente mais tarde!');
-        });
+        })();
     } else {
         return next();
     }
