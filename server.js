@@ -18,7 +18,10 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
 
         (async function obterJogos() {
             try {
-                const browser = await puppeteer.launch();
+                const browser = await puppeteer.launch({
+                    headless: true,
+                    args: ['--no-sandbox']
+                });
                 const [page] = await browser.pages();
 
                 await page.goto(url, { waitUntil: 'networkidle0' });
