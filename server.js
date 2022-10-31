@@ -126,9 +126,9 @@ app.all('*', function (req, res) {
     res.status(404).send('Rota não encontrada!');
 });
 
-const protocol = 'http';
-const hostname = 'localhost';
-const port = 8000;
+const protocol = 'https';
+const hostname = 'api-steam-graph.herokuapp.com';
+const port = 80;
 
 app.listen(port, () => {
     console.log(`O app está sendo executado no endereço: ${protocol}://${hostname}:${port}`)
