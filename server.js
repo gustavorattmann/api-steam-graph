@@ -128,7 +128,7 @@ app.all('*', function (req, res) {
 
 const protocol = 'https';
 const hostname = 'api-steam-graph.herokuapp.com';
-const port = 80;
+const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
     console.log(`O app está sendo executado no endereço: ${protocol}://${hostname}:${port}`)
