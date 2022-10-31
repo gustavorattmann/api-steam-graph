@@ -19,12 +19,15 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
         (async function obterJogos() {
             try {
                 const browser = await puppeteer.launch({
-                    headless: true,
-                    args: ['--no-sandbox']
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox'
+                    ]
                 });
+                
                 const [page] = await browser.pages();
 
-                await page.goto(url, { waitUntil: 'networkidle0' });
+                await page.goto(url);
                 const data = await page.evaluate(() => document.querySelector('.weeklytopsellers_ChartTable_3arZn').outerHTML);
 
                 const $ = cheerio.load(data);
