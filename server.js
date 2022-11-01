@@ -24,15 +24,11 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
             options.setChromeBinaryPath(process.env.CHROME_BINARY_PATH);
             let serviceBuilder = new chrome.ServiceBuilder(process.env.CHROME_DRIVER_PATH);
 
-            const screen = {
-                width: 1920,
-                height: 1080
-            };
-
             options.addArguments('--headless');
+            options.addArguments('--disable-dev-shm-usage');
             options.addArguments('--disable-gpu');
             options.addArguments('--no-sandbox');
-            options.windowSize(screen);
+            options.addArguments('--window-size=1920,1080');
 
             try {
                 const driver = await new Builder()
