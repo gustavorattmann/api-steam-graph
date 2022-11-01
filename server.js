@@ -2,8 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const {Builder, By, Key, until} = require('selenium-webdriver');
-const chrome = require('selenium-webdriver/chrome');
 
 const app = express();
 
@@ -18,7 +16,13 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
         let listaJogos = [];
 
         (async function obterJogos() {
+            const {Builder, By, Key, until} = require('selenium-webdriver');
+            require('chromedriver');
+            const chrome = require('selenium-webdriver/chrome');
+
             const options = new chrome.Options();
+            options.setChromeBinaryPath(process.env.CHROME_BINARY_PATH);
+            let serviceBuilder = new chrome.ServiceBuilder(process.env.CHROME_DRIVER_PATH);
 
             options.addArguments('--headless');
             options.addArguments('--disable-gpu');
@@ -28,6 +32,7 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
                 const driver = await new Builder()
                     .forBrowser('chrome')
                     .setChromeOptions(options)
+                    .setChromeService(serviceBuilder)
                     .build();
                 
                 await driver.get(url);
