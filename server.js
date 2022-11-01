@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const puppeteer = require('puppeteer');
+const {Builder, By, Key, until} = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
 
 const app = express();
 
@@ -17,22 +18,27 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
         let listaJogos = [];
 
         (async function obterJogos() {
-            try {
-                const browser = await puppeteer.launch({
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox'
-                    ]
-                });
-                
-                const [page] = await browser.pages();
+            const options = new chrome.Options();
 
-                await page.goto(url);
-                const data = await page.evaluate(() => document.querySelector('.weeklytopsellers_ChartTable_3arZn').outerHTML);
+            options.addArguments('--headless');
+            options.addArguments('--disable-gpu');
+            options.addArguments('--no-sandbox');
+
+            try {
+                const driver = await new Builder()
+                    .forBrowser('chrome')
+                    .setChromeOptions(options)
+                    .build();
+                
+                await driver.get(url);
+
+                const data = await driver.wait(until.elementLocated(By.xpath('//*[@id="application_root"]/div/div/div/div/div[3]/table'), 2000)).getAttribute('outerHTML');
+
+                await driver.quit();
 
                 const $ = cheerio.load(data);
                 
-                $('tbody tr.weeklytopsellers_TableRow_2-RN6').each((i, elem) => {
+                $('.weeklytopsellers_TableRow_2-RN6').each((i, elem) => {
                     var id = $(elem).find('.weeklytopsellers_RankCell_34h48').text();
                     var nome = $(elem).find('.weeklytopsellers_GameName_1n_4-').text();
                     var imagem = $(elem).find('.weeklytopsellers_CapsuleArt_2dODJ').attr('src');
@@ -113,12 +119,10 @@ app.get('/mais-jogados/:pagina?', async (req, res, next) => {
                         });
                     break;
                 }
-        
-                objetoJogos = Object.assign({}, listaJogos);
-        
-                res.send(objetoJogos);
 
-                await browser.close();
+                objetoJogos = Object.assign({}, listaJogos);
+
+                res.send(objetoJogos);
             } catch (err) {
                 console.error(err);
             }
